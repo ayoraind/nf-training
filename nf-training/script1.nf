@@ -36,4 +36,9 @@ process INDEX {
 
 workflow {
     index_ch = INDEX(params.transcriptome_file)
+    index_ch.view{ it }
 }
+
+/* the view method throws in the following filepath
+/mnt/c/Users/Afolayan/Documents/Courses/nextflow_training/nf-training-public/nf-training/work/34/696395d817ceed2b96b840d71f1e44/salmon_index
+*/

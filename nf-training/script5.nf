@@ -73,4 +73,9 @@ workflow {
     index_ch = INDEX(params.transcriptome_file)
     quant_ch = QUANTIFICATION(index_ch, read_pairs_ch)
     fastqc_ch = FASTQC(read_pairs_ch)
+    fastqc_ch.view{ it }
 }
+
+/* the view method throws in the following filepath 
+/mnt/c/Users/Afolayan/Documents/Courses/nextflow_training/nf-training-public/nf-training/work/b1/f947e1eed4d132c7660cd2e6d1fce2/fastqc_gut_logs
+*/

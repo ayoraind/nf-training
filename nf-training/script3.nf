@@ -15,4 +15,18 @@ log.info """\
         """
         .stripIndent()
 
-read_pairs_ch = Channel.fromFilePairs(params.reads)
+/*read_pairs_ch = Channel.fromFilePairs(params.reads)
+read_pairs_ch.view()
+
+/* read_pairs_ch = Channel.fromFilePairs(params.reads)
+*  can also be written as
+*/
+Channel
+.fromFilePairs(params.reads, checkIfExists: true)
+.set { read_pairs_ch }
+
+read_pairs_ch.view{ it }
+
+/* the view method throws in the following filepath (using the pattern: sample_id, path_to_file)
+[gut, [/mnt/c/Users/Afolayan/Documents/Courses/nextflow_training/nf-training-public/nf-training/data/ggal/gut_1.fq, /mnt/c/Users/Afolayan/Documents/Courses/nextflow_training/nf-training-public/nf-training/data/ggal/gut_2.fq]]
+*/

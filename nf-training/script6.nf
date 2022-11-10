@@ -90,3 +90,8 @@ workflow {
     fastqc_ch = FASTQC(read_pairs_ch)
     MULTIQC(quant_ch.mix(fastqc_ch).collect())
 }
+
+/* so the channel mix should be:
+quant_ch = /mnt/c/Users/Afolayan/Documents/Courses/nextflow_training/nf-training-public/nf-training/work/a6/63ac104136eb8522cd2dd25cbee787/gut
+fastqc_ch = /mnt/c/Users/Afolayan/Documents/Courses/nextflow_training/nf-training-public/nf-training/work/b1/f947e1eed4d132c7660cd2e6d1fce2/fastqc_gut_logs
+*/

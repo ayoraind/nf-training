@@ -32,7 +32,16 @@ process INDEX {
     """
 }
 
+/* the sample id is gut, liver, or lungs
+publishDir will create the output dir and throw analyses files into each directory
+provided you clearly stated the variable (in this case $sample_id) for the directories inside the script section
+*/
+
 process QUANTIFICATION {
+    tag "Salmon on $sample_id"
+
+    publishDir params.outdir, mode:'copy'
+
     input:
     path salmon_index
     tuple val(sample_id), path(reads)
@@ -53,4 +62,9 @@ workflow {
 
     index_ch = INDEX(params.transcriptome_file)
     quant_ch = QUANTIFICATION(index_ch, read_pairs_ch)
+    quant_ch.view{ it }
 }
+
+/* the view method throws in the following filepath
+/mnt/c/Users/Afolayan/Documents/Courses/nextflow_training/nf-training-public/nf-training/work/a6/63ac104136eb8522cd2dd25cbee787/gut
+*/
