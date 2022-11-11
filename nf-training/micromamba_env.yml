@@ -1,4 +1,4 @@
-name: nf-tutorial
+name: nf-tutorial_mamba
 channels:
     - conda-forge
     - defaults
