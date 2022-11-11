@@ -13,6 +13,5 @@ gitpod-ws.code-workspace
 .gitpod.yml
 *.nf
 mail.config
-*.yml
 *.sh
 *.png
