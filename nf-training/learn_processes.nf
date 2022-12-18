@@ -240,7 +240,9 @@ workflow {
 
 This printed out Received: [prot, dna, rna]
 
-*/
+Chapter 6.3.2
+The code below did not work
+
 
 process RANDOMNUM {
 
@@ -259,3 +261,275 @@ workflow {
   receiver_ch = RANDOMNUM()
   receiver_ch.view { "Received: " + it.text }
 }
+
+Multiple output files
+
+When an output file name contains a wildcard character (* or ?) it is interpreted as a glob path matcher. This allows us to capture multiple files into a list object and output them as a sole emission.
+
+
+process SPLITLETTERS {
+
+    output:
+    path 'chunk_*'
+
+    """
+    printf 'Hola' | split -b 1 - chunk_
+    """
+}
+
+workflow {
+    letters = SPLITLETTERS()
+    letters
+        .flatMap()
+        .view { "File: ${it.name} => ${it.text}" }
+}
+
+without the .flatMap() the results look like this
+File: [chunk_aa, chunk_ab, chunk_ac, chunk_ad] => [H, o, l, a]
+with the .flatMap() the results look like this:
+File: chunk_aa => H
+File: chunk_ab => o
+File: chunk_ac => l
+File: chunk_ad => a
+
+6.3.4: Dynamic output file names. I will need this for flye
+When an output file name needs to be expressed dynamically, it is possible to define it using a dynamic string that references values defined in the input declaration block or in the script global context
+
+
+species = ['cat','dog', 'sloth']
+sequences = ['AGATAG','ATGCTCT', 'ATCCCAA']
+
+Channel.fromList(species)
+       .set { species_ch }
+
+process ALIGN {
+
+  input:
+  val x
+  val seq
+
+  output:
+  path "${x}.aln"
+
+  script:
+  """
+  echo align -in $seq > ${x}.aln
+  """
+}
+
+workflow {
+  genomes = ALIGN( species_ch, sequences )
+  genomes.view()
+}
+
+This produces e.g /mnt/c/Users/Afolayan/Documents/Courses/nextflow_training/nf-training-public/nf-training/work/60/966e6a178a6bb3d3c65616d6e7c1ef/dog.aln
+within it, you find e.g., align -in [AGATAG, ATGCTCT, ATCCCAA]
+
+6.3.5: Composite input and output
+
+
+reads_ch = Channel.fromFilePairs('data/ggal/*_{1,2}.fq')
+
+process FOO {
+
+  input:
+    tuple val(sample_id), path(sample_id)
+
+  output:
+    tuple val(sample_id), path("sample.bam")
+
+  script:
+  """
+    echo your_command_here --reads $sample_id > sample_id.bam
+  """
+}
+
+workflow {
+  bam_ch = FOO(reads_ch)
+  bam_ch.view()
+}
+
+the difference here is that the output remains a literal sample_id.bam for all files within the work dir
+note that at the input section, the path is stated as path(sample_id)
+
+
+reads_ch = Channel.fromFilePairs('data/ggal/*_{1,2}.fq')
+
+process FOO {
+
+  input:
+    tuple val(sample_id), path(sample_files)
+
+  output:
+    tuple val(sample_id), path("${sample_id}.bam")
+
+  script:
+  """
+    echo your_command_here --reads $sample_id > ${sample_id}.bam
+  """
+}
+
+workflow {
+  bam_ch = FOO(reads_ch)
+  bam_ch.view()
+}
+
+the difference here is that the output remains a literal sample_id.bam for all files within the work dir
+note that at the input section, the path is stated as path(sample_files) and the output script output name.bam file varies in name
+
+6.4:  using the when delaration (functions like ifelse)
+*/
+/*
+params.dbtype = 'nr'
+params.prot = 'data/prots/*.tfa'
+proteins = Channel.fromPath(params.prot)
+
+process FIND {
+    debug true
+
+    input:
+    path fasta
+    val type
+
+    when:
+    fasta.name =~ /^BB11.* && type == 'nr' 
+
+//    script:
+//    """
+//    echo blastp -query $fasta -db nr
+//    """
+//}
+
+/*
+workflow {
+  result = FIND(proteins, params.dbtype)
+}
+
+6.5. Directives: allow the definition of optional settings that affect the execution of the current process without affecting the semantic of the task itself
+
+
+process FOO {
+  cpus 2
+  memory 1.GB
+  container 'image/name'
+
+  script:
+  """
+  echo your_command --this --that
+  """
+}
+
+6.6: Organize output, using the publishDir to publish the output
+
+
+params.outdir = 'my-results'
+params.prot = 'data/prots/*.tfa'
+proteins = Channel.fromPath(params.prot)
+
+
+process BLASTSEQ {
+    publishDir "$params.outdir/bam_files", mode: 'copy'
+
+    input:
+    path fasta
+
+    output:
+    path ('*.txt')
+
+    script:
+    """
+    echo blastp $fasta > ${fasta}_result.txt
+    """
+}
+
+workflow {
+  blast_ch = BLASTSEQ(proteins)
+  blast_ch.view()
+}
+6.6.2: Manage semantic sub-directories
+
+
+params.reads = 'data/reads/*_{1,2}.fq.gz'
+params.outdir = 'my-results'
+
+samples_ch = Channel.fromFilePairs(params.reads, flat: true)
+
+process FOO {
+  publishDir "$params.outdir/$sampleId/", pattern: '*.fq'
+  publishDir "$params.outdir/$sampleId/counts", pattern: "*_counts.txt"
+  publishDir "$params.outdir/$sampleId/outlooks", pattern: '*_outlook.txt'
+
+  input:
+    tuple val(sampleId), path('sample1.fq.gz'), path('sample2.fq.gz')
+
+  output:
+    path "*"
+
+  script:
+  """
+    < sample1.fq.gz zcat > sample1.fq
+    < sample2.fq.gz zcat > sample2.fq
+
+    awk '{s++}END{print s/4}' sample1.fq > sample1_counts.txt
+    awk '{s++}END{print s/4}' sample2.fq > sample2_counts.txt
+
+    head -n 50 sample1.fq > sample1_outlook.txt
+    head -n 50 sample2.fq > sample2_outlook.txt
+  """
+}
+
+workflow {
+  out_channel = FOO(samples_ch)
+}
+
+*/
+
+/* Chapter 7.2.2
+Use fromPath to create a channel emitting the fastq files matching the pattern data/ggal/*.fq, then use map to return a pair containing the file name and the path itself, and finally, use view to print the resulting channel
+*/
+/*
+Channel
+    .fromPath('data/ggal/*.fq')
+    .map { it -> [it.name, it] }
+    .view{ it, filepath -> "$it is found in $filepath"}
+
+ e.g of answers, gut_1.fq is found in /mnt/c/Users/Afolayan/Documents/Courses/nextflow_training/nf-training-public/nf-training/data/ggal/gut_1.fq 
+ */
+/*
+Channel
+    .of(1,2,3)
+    .collect()
+    .view()
+
+The result of the collect operator is a value channel
+
+7.2.6 groupTuple
+Exercise:
+Use fromPath to create a channel emitting all of the files in the folder data/meta/, then use a map to associate the baseName prefix to each file. Finally, group all files that have the same common prefix
+
+ 
+Channel
+    .fromPath('data/meta/*')
+    .map{ file -> tuple(file.baseName, file) }
+    .groupTuple()
+    .view { baseName, file -> "> $baseName : $file" }
+    
+
+*/
+
+/*
+8.9 for loop syntax
+for (int i = 0; i <3; i++) {
+   println("Hello World $i")
+}
+
+Iteration over list objects is also possible using the syntax below:
+*/
+
+list = ['a','b','c']
+
+for( String elem : list ) {
+  println elem
+}
+
+
