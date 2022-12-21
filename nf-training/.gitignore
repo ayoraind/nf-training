@@ -3,3 +3,7 @@
 *.txt
 *.sif
 singularity-ce-3.10.4
+my-results
+data/*
+chunk_*
+xa*
